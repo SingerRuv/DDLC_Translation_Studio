@@ -1,0 +1,27 @@
+name: Build DDLC Translation Studio
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "translator-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r build/requirements-build.txt
+      - run: python -m unittest discover -s tests -v
+      - run: pwsh -File build/build_windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DDLCTranslationStudio-windows-x64
+          path: dist/windows/DDLCTranslationStudio.exe
+          if-no-files-found: error
