@@ -1,18 +1,21 @@
-"""Application paths and settings."""
+"""Application paths and persisted settings."""
 import json
 from pathlib import Path
 
 APP = "DDLC Translation Studio"
 DATA_DIR = Path.home() / ".ddlc_translation_studio"
 SETTINGS_PATH = DATA_DIR / "settings.json"
+PROJECTS_ROOT = Path.home() / "DDLC Translation Studio Projects"
+MODS_ROOT = Path.home() / "DDLC Mods"
 
 DEFAULT_SETTINGS = {
-    "rpa_extractor": "unrpa",
-    "rpa_args": ["-p", "{output}", "{input}"],
-    "rpyc_decompiler": "unrpyc",
-    "rpyc_args": ["{input}"],
-    "renpy": "renpy",
-    "renpy_args": ["{project}", "compile"],
+    "language": "es",
+    "theme": "dark",
+    "renpy6": "",
+    "renpy7": "",
+    "renpy8": "",
+    "last_base": "",
+    "recent_projects": [],
 }
 
 
@@ -31,6 +34,7 @@ def load_settings():
 
 def save_settings(settings):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = SETTINGS_PATH.with_suffix(".tmp")
-    tmp.write_text(json.dumps(settings, indent=2), encoding="utf-8")
-    tmp.replace(SETTINGS_PATH)
+    temp = SETTINGS_PATH.with_suffix(".tmp")
+    temp.write_text(json.dumps(settings, indent=2, ensure_ascii=False),
+                    encoding="utf-8")
+    temp.replace(SETTINGS_PATH)

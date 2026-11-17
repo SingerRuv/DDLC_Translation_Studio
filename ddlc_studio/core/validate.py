@@ -29,9 +29,7 @@ def validate(original, translation):
         return ["translation is empty"]
     for name, pattern in (("variable", VARIABLE), ("tag", TAG),
                           ("format", FORMAT)):
-        before = _counts(pattern, original)
-        after = _counts(pattern, translation)
-        if before != after:
+        if _counts(pattern, original) != _counts(pattern, translation):
             errors.append("%s placeholders differ" % name)
     if original.count("\\n") != translation.count("\\n"):
         errors.append("line breaks differ")
@@ -40,9 +38,11 @@ def validate(original, translation):
     return errors
 
 
-def validate_project(project):
+def validate_project(project, include_empty=False):
     problems = []
     for row in project.strings():
+        if not include_empty and not row["translation"].strip():
+            continue
         for message in validate(row["original"], row["translation"]):
             problems.append((row["id"], row["relative_path"], row["line"],
                              message))

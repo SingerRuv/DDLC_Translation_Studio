@@ -1,7 +1,7 @@
 """SQLite project storage."""
 import sqlite3
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -62,8 +62,7 @@ class Project:
             (relative_path,)).fetchone()
         return row["id"]
 
-    def add_string(self, file_id, line, original, context="",
-                   commit=True):
+    def add_string(self, file_id, line, original, context="", commit=True):
         row = self.db.execute(
             "SELECT id FROM strings WHERE file_id = ? AND line = ? AND "
             "original = ?", (file_id, line, original)).fetchone()
@@ -71,8 +70,7 @@ class Project:
             return row["id"]
         cursor = self.db.execute(
             "INSERT INTO strings(file_id, line, original, context) "
-            "VALUES(?, ?, ?, ?)",
-            (file_id, line, original, context))
+            "VALUES(?, ?, ?, ?)", (file_id, line, original, context))
         if commit:
             self.db.commit()
         return cursor.lastrowid

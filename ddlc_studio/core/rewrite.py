@@ -1,37 +1,35 @@
-"""Apply translated strings back to decompiled Ren'Py scripts."""
+"""Apply translated strings to the workspace scripts."""
 from pathlib import Path
 
 from .indexer import _literal
-from .validate import validate
 
 
-def _file_rows(project):
+def translated_files(project):
+    return sorted({row["relative_path"] for row in project.strings()
+                   if row["translation"].strip()})
+
+
+def apply_translations(project, workspace_root, source_root=None):
+    workspace_root = Path(workspace_root).resolve()
+    source_root = Path(source_root or project.get_meta("snapshot") or
+                       workspace_root).resolve()
     grouped = {}
     for row in project.strings():
-        if not row["translation"].strip():
-            continue
-        grouped.setdefault(row["relative_path"], []).append(row)
-    return grouped
-
-
-def apply_translations(project, workspace, source=None):
-    workspace = Path(workspace).resolve()
-    source = Path(source or project.get_meta("snapshot") or workspace).resolve()
-    grouped = _file_rows(project)
+        if row["translation"].strip():
+            grouped.setdefault(row["relative_path"], []).append(row)
     pending = {}
     errors = []
     applied = 0
-    skipped = 0
     for relative, rows in grouped.items():
-        source_path = (source / relative).resolve()
-        target = (workspace / relative).resolve()
-        if source not in source_path.parents or not source_path.is_file():
+        source = (source_root / relative).resolve()
+        target = (workspace_root / relative).resolve()
+        if source_root not in source.parents or not source.is_file():
             errors.append((relative, 0, "source script not found"))
             continue
-        if workspace not in target.parents:
-            errors.append((relative, 0, "target script outside workspace"))
+        if workspace_root not in target.parents:
+            errors.append((relative, 0, "target outside workspace"))
             continue
-        lines = source_path.read_text(encoding="utf-8-sig").splitlines(
+        lines = source.read_text(encoding="utf-8-sig").splitlines(
             keepends=True)
         by_line = {}
         for row in rows:
@@ -44,24 +42,23 @@ def apply_translations(project, workspace, source=None):
             if number < 1 or number > len(lines):
                 errors.append((relative, number, "line out of range"))
                 continue
-            for problem in validate(row["original"], row["translation"]):
-                errors.append((relative, number, problem))
             found = _literal(lines[number - 1])
             if found is None:
                 errors.append((relative, number, "quoted string not found"))
                 continue
-            original, start, end = found
+            original, start = found
             if original != row["original"]:
                 errors.append((relative, number, "source text changed"))
                 continue
             replacement = row["translation"].replace("\n", "\\n")
+            closing_quote = start + len(original) + 1
             lines[number - 1] = (lines[number - 1][:start + 1] +
-                                 replacement + lines[number - 1][end - 1:])
+                                 replacement + lines[number - 1][closing_quote:])
             applied += 1
         pending[target] = "".join(lines)
     if errors:
-        return {"applied": applied, "skipped": skipped, "errors": errors}
+        return {"applied": applied, "errors": errors}
     for path, content in pending.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
-    return {"applied": applied, "skipped": skipped, "errors": []}
+    return {"applied": applied, "errors": []}
